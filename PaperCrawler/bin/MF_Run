@@ -1,0 +1,6 @@
+Run:
+	@echo ""
+	@echo "Run : "
+	@echo ""
+	@java -cp .:../jar/jsoup-1.8.2.jar:../jar/mysql-connector-java-5.1.36-bin.jar Main
+	@echo ""

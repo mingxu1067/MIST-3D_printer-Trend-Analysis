@@ -1,0 +1,11 @@
+JsoupMain:
+	@echo "Compiler : "
+	javac -classpath ./jar/mysql-connector-java-5.1.36-bin.jar ./src/PaperAttribute.java -d ./bin
+	javac ./src/SearchPaperIF.java -d ./bin
+	javac -classpath ./jar/jsoup-1.8.2.jar:./bin ./src/JsoupToACM_DL.java -d ./bin
+	#javac -classpath ./jar/jsoup-1.8.2.jar:./bin ./src/JsoupToIEEE_xplore.java -d ./bin
+	javac -classpath ./bin ./src/SearchFactory.java -d ./bin
+	javac -classpath ./bin ./src/Crawler.java -d ./bin
+	javac -classpath ./bin ./src/Main.java -d ./bin
+
+	@echo "==========================Finish=========================="

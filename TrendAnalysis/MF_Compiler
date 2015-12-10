@@ -1,0 +1,11 @@
+Analysis:
+	@echo "Compiler : "
+	#javac -cp ./bin ./src/Inflector.java -d ./bin
+	javac -cp ./bin:./jar/mysql-connector-java-5.1.36-bin.jar ./src/TrendAnalysis.java -d ./bin
+	javac -cp ./jar/jsoup-1.8.2.jar:./bin:./jar/mysql-connector-java-5.1.36-bin.jar ./src/PaperClassify.java -d ./bin
+	javac -cp ./bin:./jar/ws4j-1.0.1.jar:./jar/jawjaw-1.0.2.jar:./jar/mysql-connector-java-5.1.36-bin.jar ./src/WordsCluster.java -d ./bin
+	javac -cp ./bin:./jar/mysql-connector-java-5.1.36-bin.jar ./src/CalTFIDF.java -d ./bin
+	javac -cp ./jar/stanford-postagger.jar:./jar/mysql-connector-java-5.1.36-bin.jar ./src/NounFetch.java -d ./bin
+	javac -cp ./bin ./src/Main.java -d ./bin
+
+	@echo "==========================Finish=========================="
