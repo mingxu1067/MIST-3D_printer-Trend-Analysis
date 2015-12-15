@@ -1,0 +1,23 @@
+apply plugin: 'war'
+
+def tomcatRootPath = ''
+def appName = '3D-printer Web'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    providedCompile fileTree(dir: "$tomcatRootPath/lib", includes: ['*.jar'])
+    compile 'mysql:mysql-connector-java:5.1.37'
+}
+
+task clearAppInTomcat(type: Delete, dependsOn: 'build') {
+    delete "$tomcatRootPath/webapps/$appName"
+    delete "$tomcatRootPath/webapps/${appName}.war"
+}
+
+task moveAppToTomcat(type: Copy, dependsOn: 'clearAppInTomcat') {
+    from "build/libs/${appName}.war"
+    into "$tomcatRootPath/webapps"
+}
