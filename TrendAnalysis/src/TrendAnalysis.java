@@ -11,21 +11,64 @@ import java.util.Map.Entry;
 
 import java.util.List;
 import java.util.LinkedList;
+import java.util.ArrayList;
 
 import java.util.Date;
 import java.text.SimpleDateFormat;
 import java.text.ParseException;
 
+import com.gtranslate.Audio;
+import com.gtranslate.Language;
+import com.gtranslate.Translator;
+
+import com.huaban.analysis.jieba.JiebaSegmenter;
+import com.huaban.analysis.jieba.JiebaSegmenter.SegMode;
+import com.huaban.analysis.jieba.SegToken;
+import com.huaban.analysis.jieba.WordDictionary;
+
+import java.nio.file.Paths;
+import java.util.Random;
+
+import edu.cmu.lti.lexical_db.ILexicalDatabase;
+import edu.cmu.lti.lexical_db.NictWordNet;
+import edu.cmu.lti.ws4j.RelatednessCalculator;
+import edu.cmu.lti.ws4j.impl.HirstStOnge;
+import edu.cmu.lti.ws4j.impl.JiangConrath;
+import edu.cmu.lti.ws4j.impl.LeacockChodorow;
+import edu.cmu.lti.ws4j.impl.Lesk;
+import edu.cmu.lti.ws4j.impl.Lin;
+import edu.cmu.lti.ws4j.impl.Path;
+import edu.cmu.lti.ws4j.impl.Resnik;
+import edu.cmu.lti.ws4j.impl.WuPalmer;
+import edu.cmu.lti.ws4j.util.WS4JConfiguration;
+
+
 public class TrendAnalysis {
 
+	private Map<String, List<String>> areaEncoding;
 	private Map<String, Date> paperTime;
 	private Map<String, List<String>> areasOfPaper;
 	private Map<String, List<String>> trend;
+	private Map<String, List<String>> trendWithArea;
+
+	private List<SegToken> tokenList;
+    private JiebaSegmenter jieba;
+    private Translator translate;
+
+    private static ILexicalDatabase wordNetDB;
 
 	public TrendAnalysis() {
+		areaEncoding = new HashMap<String, List<String>>();
 		paperTime = new HashMap<String, Date>();
 		areasOfPaper = new HashMap<String, List<String>>();
 		trend = new HashMap<String, List<String>>();
+		trendWithArea = new HashMap<String, List<String>>();
+		jieba = new JiebaSegmenter();
+		tokenList = new ArrayList<SegToken>();
+		translate = Translator.getInstance();
+
+		wordNetDB = new NictWordNet();
+		loadWordDBtoJiabe();
 	}
 
 	public void getPaperDataFromDB (String SQL_URL,String user, String password) throws ParseException{
@@ -60,6 +103,24 @@ public class TrendAnalysis {
 					areasOfPaper.put(rs.getString("PaperNo"), new LinkedList<String>());
 					areasOfPaper.get(rs.getString("PaperNo")).add(rs.getString("Area"));	
 				}
+			}
+
+			query = "select Encode, EnglishName from AreaEncodeMap";
+			
+			rs = st.executeQuery(query);
+
+			while(rs.next()){
+				areaEncoding.put(rs.getString("Encode"), new ArrayList<String>());
+				char[] name = rs.getString("EnglishName").toCharArray();
+				int tmepIdx = 0;
+				for(int i = 0; i < name.length; i++) {
+					if (Character.isUpperCase(name[i]) && i > 0) {
+						areaEncoding.get(rs.getString("Encode")).add(rs.getString("EnglishName").substring(tmepIdx,i));
+						tmepIdx = i;
+					}
+				}
+				areaEncoding.get(rs.getString("Encode")).add(rs.getString("EnglishName").substring(tmepIdx));
+
 			}
 
 			st.close();
@@ -101,7 +162,44 @@ public class TrendAnalysis {
 			}
 		}
 
-		return trend;
+
+		WS4JConfiguration.getInstance().setMFS(true);
+		WuPalmer wordnet = new WuPalmer(wordNetDB);
+
+		for (Map.Entry<String, List<String>> e : trend.entrySet()) {
+			trendWithArea.put(e.getKey(), new LinkedList<String>());
+			System.out.println(e.getKey());
+			for (String s : e.getValue()){
+				tokenList = jieba.process(s, SegMode.INDEX);
+				for (SegToken st : tokenList) {
+					String word = translate.translate(st.word, Language.CHINESE ,Language.ENGLISH);
+					System.out.println(word);
+					for (Map.Entry<String, List<String>> area : areaEncoding.entrySet()) {
+						for (String eName : area.getValue()) {
+							if ( wordnet.calcRelatednessOfWords(eName, word) >= 0.7 ){
+								trendWithArea.get(e.getKey()).add(area.getKey());
+							}
+						}
+					}
+
+					Random rand = new Random();
+					try {
+					    Thread.sleep(rand.nextInt(8000) + 8000);
+					} catch(InterruptedException ex) {
+					    Thread.currentThread().interrupt();
+					}
+				}
+			}
+		}
+
+		return trendWithArea;
 	}
+
+
+	private void loadWordDBtoJiabe() {
+        WordDictionary dictAdd = WordDictionary.getInstance();
+        dictAdd.loadUserDict(Paths.get("./JiebaDB/dict.txt"));
+    }
+
 
 }

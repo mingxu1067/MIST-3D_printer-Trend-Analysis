@@ -41,13 +41,5 @@ public class Main{
 		trender.getPaperDataFromDB("127.0.0.1:3306/papers3dprinter","3Dprinter","3Dprinter");
 		Map<String, List<String>> trend = trender.trendAnalysis(2011, 2015);
 
-		for (Map.Entry<String, List<String>> e : trend.entrySet()) {
-			System.out.println(e.getKey());
-			for (String s : e.getValue()){
-				System.out.println("		" + s);
-
-			}
-		}
-
 	}
 }

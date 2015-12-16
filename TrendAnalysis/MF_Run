@@ -2,5 +2,5 @@ Run:
 	@echo ""
 	@echo "Run : "
 	@echo ""
-	@java -cp ./jar/jawjaw-1.0.2.jar:./jar/ws4j-1.0.1.jar:./jar/stanford-postagger.jar:./jar/mysql-connector-java-5.1.36-bin.jar:./jar/jsoup-1.8.2.jar:./bin Main
+	@java -cp ./jar/jawjaw-1.0.2.jar:./jar/ws4j-1.0.1.jar:./jar/stanford-postagger.jar:./jar/mysql-connector-java-5.1.36-bin.jar:./jar/jsoup-1.8.2.jar:./jar/gtranslateapi-1.0.jar:./jar/jieba-analysis-1.0.2.jar:./bin Main
 	@echo ""
