@@ -1,7 +1,7 @@
 apply plugin: 'war'
 
-def tomcatRootPath = ''
-def appName = '3D-printer Web'
+def tomcatRootPath = '/usr/local/Cellar/tomcat/8.0.28/libexec'
+def appName = '3D-PrinterWeb'
 
 repositories {
     mavenCentral()
@@ -18,6 +18,6 @@ task clearAppInTomcat(type: Delete, dependsOn: 'build') {
 }
 
 task moveAppToTomcat(type: Copy, dependsOn: 'clearAppInTomcat') {
-    from "build/libs/${appName}.war"
+    from "./build/libs/${appName}.war"
     into "$tomcatRootPath/webapps"
 }
