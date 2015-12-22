@@ -13,13 +13,11 @@ import java.util.List;
 import java.util.LinkedList;
 import java.util.ArrayList;
 
+import java.io.IOException;
+
 import java.util.Date;
 import java.text.SimpleDateFormat;
 import java.text.ParseException;
-
-import com.gtranslate.Audio;
-import com.gtranslate.Language;
-import com.gtranslate.Translator;
 
 import com.huaban.analysis.jieba.JiebaSegmenter;
 import com.huaban.analysis.jieba.JiebaSegmenter.SegMode;
@@ -42,18 +40,29 @@ import edu.cmu.lti.ws4j.impl.Resnik;
 import edu.cmu.lti.ws4j.impl.WuPalmer;
 import edu.cmu.lti.ws4j.util.WS4JConfiguration;
 
+import java.net.URL;
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.parser.Parser;
+import org.jsoup.select.Elements;
+import org.jsoup.nodes.Element;
+
 
 public class TrendAnalysis {
+
+	private static final String[] IGNORE_EN_WORD = {"to"};
+	private static final double AREA_WORD_SIMULATE_DOORSTEP = 0.7;
 
 	private Map<String, List<String>> areaEncoding;
 	private Map<String, Date> paperTime;
 	private Map<String, List<String>> areasOfPaper;
 	private Map<String, List<String>> trend;
-	private Map<String, List<String>> trendWithArea;
+	Map<String, List<AreaResult>> trendResultWithTimes;
+
 
 	private List<SegToken> tokenList;
     private JiebaSegmenter jieba;
-    private Translator translate;
 
     private static ILexicalDatabase wordNetDB;
 
@@ -62,10 +71,9 @@ public class TrendAnalysis {
 		paperTime = new HashMap<String, Date>();
 		areasOfPaper = new HashMap<String, List<String>>();
 		trend = new HashMap<String, List<String>>();
-		trendWithArea = new HashMap<String, List<String>>();
+		trendResultWithTimes = new HashMap<String, List<AreaResult>>();
 		jieba = new JiebaSegmenter();
 		tokenList = new ArrayList<SegToken>();
-		translate = Translator.getInstance();
 
 		wordNetDB = new NictWordNet();
 		loadWordDBtoJiabe();
@@ -138,7 +146,45 @@ public class TrendAnalysis {
 
 	}
 
-	public Map<String, List<String>> trendAnalysis (int startYear, int endYear) throws ParseException{
+	public void storeTrendResultToDB (String SQL_URL,String user, String password) throws ParseException{
+
+		Connection SQLcon;
+		try{
+			Class.forName("com.mysql.jdbc.Driver");
+			SQLcon = DriverManager.getConnection("jdbc:mysql://"+SQL_URL+"?useUnicode=true&characterEncoding=UTF8", user, password);
+			String query = "insert into TrendResult(date,area_encoding,times)" + " values (?,?,?)";
+		    PreparedStatement preparedStmt = SQLcon.prepareStatement(query);
+
+		    for (Map.Entry<String, List<AreaResult>> entry : trendResultWithTimes.entrySet()) {
+				for (AreaResult re : entry.getValue()) {
+				    preparedStmt.setString(1, entry.getKey());
+				    preparedStmt.setString(2, re.encoding);
+				    preparedStmt.setInt(3, re.times);
+					
+					preparedStmt.execute();
+
+				}
+			}
+
+		    SQLcon.close();
+		}
+		catch (ClassNotFoundException e)
+		{
+		    System.out.println("DriverClassNotFound :" + e.toString());
+		}
+		catch (SQLException x)
+		{
+		    System.out.println("Exception :" + x.toString());
+		}
+
+	}
+
+	public void trendAnalysis (int startYear, int endYear) throws IOException, ParseException{
+
+		Map<String, List<String>> trendWithArea;
+
+		trendWithArea = new HashMap<String, List<String>>();
+
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
 		// because Using the Date compare (after, before), the date set from startYear-1 12/31 to endYear+1 01/01
 		Date startDate = sdf.parse(startYear-1 + "1231"); 
@@ -166,17 +212,33 @@ public class TrendAnalysis {
 		WS4JConfiguration.getInstance().setMFS(true);
 		WuPalmer wordnet = new WuPalmer(wordNetDB);
 
+		Document translator;
+
 		for (Map.Entry<String, List<String>> e : trend.entrySet()) {
 			trendWithArea.put(e.getKey(), new LinkedList<String>());
 			System.out.println(e.getKey());
 			for (String s : e.getValue()){
 				tokenList = jieba.process(s, SegMode.INDEX);
 				for (SegToken st : tokenList) {
-					String word = translate.translate(st.word, Language.CHINESE ,Language.ENGLISH);
-					System.out.println(word);
+					translator = Jsoup.connect("http://cdict.net/?q=" + st.word).userAgent("Mozilla").timeout(10000).get();
+					Elements elms = translator.select("pre a[class=w]");
+					String word = "";
+					for (Element et : elms) {
+						boolean ignore = false;
+						word = et.text();
+						for (String str : IGNORE_EN_WORD) {
+							if (word.equals(str)) {
+								ignore = true;
+							}
+						}
+						if ( !ignore ) {
+							break;
+						}
+					}
+
 					for (Map.Entry<String, List<String>> area : areaEncoding.entrySet()) {
 						for (String eName : area.getValue()) {
-							if ( wordnet.calcRelatednessOfWords(eName, word) >= 0.7 ){
+							if ( wordnet.calcRelatednessOfWords(eName, word) >= AREA_WORD_SIMULATE_DOORSTEP ){
 								trendWithArea.get(e.getKey()).add(area.getKey());
 							}
 						}
@@ -184,7 +246,7 @@ public class TrendAnalysis {
 
 					Random rand = new Random();
 					try {
-					    Thread.sleep(rand.nextInt(8000) + 8000);
+					    Thread.sleep(rand.nextInt(2000) + 2000);
 					} catch(InterruptedException ex) {
 					    Thread.currentThread().interrupt();
 					}
@@ -192,7 +254,30 @@ public class TrendAnalysis {
 			}
 		}
 
-		return trendWithArea;
+		for (Map.Entry<String, List<String>> entry : trend.entrySet()) {
+			List<AreaResult> arList = new LinkedList<AreaResult>();
+			for (String s : entry.getValue()) {
+				boolean isFind = false;
+				for (AreaResult ar : arList) {
+					if (ar.encoding.equals(s)) {
+						ar.times++;
+						isFind = true;
+					}
+
+					if (isFind)
+						break;
+				}
+
+				if (!isFind) {
+					arList.add(new AreaResult(s));
+				}
+			}
+
+			trendResultWithTimes.put(entry.getKey(), arList);
+			arList.clear();
+
+		}
+
 	}
 
 
