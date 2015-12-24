@@ -220,7 +220,7 @@ public class TrendAnalysis {
 			for (String s : e.getValue()){
 				tokenList = jieba.process(s, SegMode.INDEX);
 				for (SegToken st : tokenList) {
-					translator = Jsoup.connect("http://cdict.net/?q=" + st.word).userAgent("Mozilla").timeout(10000).get();
+					translator = Jsoup.connect("http://cdict.net/?q=" + st.word).userAgent("Mozilla").timeout(0).get();
 					Elements elms = translator.select("pre a[class=w]");
 					String word = "";
 					for (Element et : elms) {
@@ -246,7 +246,7 @@ public class TrendAnalysis {
 
 					Random rand = new Random();
 					try {
-					    Thread.sleep(rand.nextInt(2000) + 2000);
+					    Thread.sleep(rand.nextInt(4000) + 4000);
 					} catch(InterruptedException ex) {
 					    Thread.currentThread().interrupt();
 					}
@@ -254,7 +254,7 @@ public class TrendAnalysis {
 			}
 		}
 
-		for (Map.Entry<String, List<String>> entry : trend.entrySet()) {
+		for (Map.Entry<String, List<String>> entry : trendWithArea.entrySet()) {
 			List<AreaResult> arList = new LinkedList<AreaResult>();
 			for (String s : entry.getValue()) {
 				boolean isFind = false;
@@ -274,8 +274,6 @@ public class TrendAnalysis {
 			}
 
 			trendResultWithTimes.put(entry.getKey(), arList);
-			arList.clear();
-
 		}
 
 	}

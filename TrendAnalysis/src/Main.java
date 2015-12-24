@@ -39,8 +39,9 @@ public class Main{
 
 		TrendAnalysis trender = new TrendAnalysis();
 		trender.getPaperDataFromDB("127.0.0.1:3306/papers3dprinter","3Dprinter","3Dprinter");
-		trender.trendAnalysis(2011, 2015);
+		trender.trendAnalysis(2014, 2014);
 		trender.storeTrendResultToDB("127.0.0.1:3306/papers3dprinter","3Dprinter","3Dprinter");
+		System.out.println("Trend Analysis Done");
 
 	}
 }
